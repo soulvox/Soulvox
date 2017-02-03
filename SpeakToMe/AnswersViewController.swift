@@ -16,7 +16,7 @@ final class AnswersViewController: UITableViewController, AVSpeechSynthesizerDel
     
     private var timer: Timer?
     
-    private var selectedRow: Int = 0
+    private var selectedRow: Int = -1
     
     private var gesture: UITapGestureRecognizer?
     
@@ -39,6 +39,7 @@ final class AnswersViewController: UITableViewController, AVSpeechSynthesizerDel
         
         view.backgroundColor = UIColor(colorLiteralRed: 0.33, green: 0.28, blue: 0.25, alpha: 1.0)
         
+        tableView.allowsSelection = false
         tableView.register(UITableViewCell.self, forCellReuseIdentifier: AnswersViewController.reuseIdentifier)
         
         guard answers.count > 0 else { return }
@@ -47,10 +48,19 @@ final class AnswersViewController: UITableViewController, AVSpeechSynthesizerDel
         cell?.isHighlighted = true
         
         gesture = UITapGestureRecognizer(target: self, action: #selector(AnswersViewController.tap))
+        view.addGestureRecognizer(gesture!)
     }
     
     @objc private func tap() {
+        timer?.invalidate()
         
+        let text = self.answers[self.selectedRow]
+        
+        let utterance = AVSpeechUtterance(string: text)
+        utterance.rate = AVSpeechUtteranceDefaultSpeechRate
+        utterance.voice = AVSpeechSynthesisVoice(language: "pt-BR")
+        
+        synthesizer.speak(utterance)
     }
     
     override func viewDidAppear(_ animated: Bool) {
@@ -58,6 +68,10 @@ final class AnswersViewController: UITableViewController, AVSpeechSynthesizerDel
         
         guard answers.count > 0 else { return }
         
+        setTimer()
+    }
+    
+    private func setTimer() {
         timer = Timer.scheduledTimer(withTimeInterval: 3.0, repeats: true, block: { (timer) in
             if self.selectedRow + 1 > self.answers.count - 1 {
                 self.selectedRow = 0
@@ -69,6 +83,9 @@ final class AnswersViewController: UITableViewController, AVSpeechSynthesizerDel
             
             let previousCell = self.tableView.cellForRow(at: IndexPath(row: previousRow, section: 0))
             let currentCell = self.tableView.cellForRow(at: IndexPath(row: self.selectedRow, section: 0))
+            
+            previousCell?.textLabel?.textColor = UIColor.white
+            currentCell?.textLabel?.textColor = UIColor(colorLiteralRed: 0.33, green: 0.28, blue: 0.25, alpha: 1.0)
             
             previousCell?.isHighlighted = false
             currentCell?.isHighlighted = true
@@ -101,21 +118,21 @@ final class AnswersViewController: UITableViewController, AVSpeechSynthesizerDel
         return cell
     }
     
-    override func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
-        let text = self.answers[indexPath.row]
-        
-        let utterance = AVSpeechUtterance(string: text)
-        utterance.rate = AVSpeechUtteranceDefaultSpeechRate
-        utterance.voice = AVSpeechSynthesisVoice(language: "pt-BR")
-        
-        synthesizer.speak(utterance)
-    }
+//    override func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
+//        let text = self.answers[indexPath.row]
+//        
+//        let utterance = AVSpeechUtterance(string: text)
+//        utterance.rate = AVSpeechUtteranceDefaultSpeechRate
+//        utterance.voice = AVSpeechSynthesisVoice(language: "pt-BR")
+//        
+//        synthesizer.speak(utterance)
+//    }
     
     func speechSynthesizer(_ synthesizer: AVSpeechSynthesizer, didStart utterance: AVSpeechUtterance) {
         print("Starting")
     }
     
     func speechSynthesizer(_ synthesizer: AVSpeechSynthesizer, didFinish utterance: AVSpeechUtterance) {
-        print("Finished")
+        setTimer()
     }
 }
