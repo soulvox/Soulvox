@@ -11,11 +11,13 @@ import Foundation
 struct AnswersRequest {
     
     private let session: URLSession
-    private let baseURLString = "http://soulvox.mybluemix.net/send?txt="
+    private let baseURLString = "http://soulvox.mybluemix.net/post"
     
     init() {
         let configuration = URLSessionConfiguration.ephemeral
         configuration.requestCachePolicy = .reloadIgnoringLocalCacheData
+        configuration.timeoutIntervalForRequest = 30
+        configuration.timeoutIntervalForResource = 30
         
         let session = URLSession(configuration: configuration)
         
@@ -24,17 +26,28 @@ struct AnswersRequest {
     
     func getAnswers(for question: String, completionHandler: @escaping ([String]) -> Void) {
         
-        guard let encodedQuestion = question.addingPercentEncoding(withAllowedCharacters: CharacterSet.urlQueryAllowed) else {
+        guard let url = URL(string: baseURLString) else {
             completionHandler([])
             return
         }
         
-        guard let url = URL(string: baseURLString + encodedQuestion) else {
+        let dict = ["txt": question]
+        let json: Data
+        
+        do {
+            json = try JSONSerialization.data(withJSONObject: dict, options: [])
+        }
+        catch {
             completionHandler([])
             return
         }
         
-        let task = session.dataTask(with: url) { (data, response, error) in
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.httpBody = json
+        request.addValue("application/json", forHTTPHeaderField: "Content-Type")
+        
+        let task = session.dataTask(with: request) { (data, response, error) in
             guard error == nil else {
                 print("Failed to get answers with error: \(error).")
                 
